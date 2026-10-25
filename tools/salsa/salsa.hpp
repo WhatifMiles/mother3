@@ -31,7 +31,11 @@ struct ISalsaFile {
     ISalsaFile() = default;
     ISalsaFile(const char* path) {
         std::fstream(path, std::ios::out | std::ios::app).close();  // make sure exists
-        file = std::make_unique<std::fstream>(path);
+        #ifdef _WIN32
+        file = std::make_unique<std::fstream>(path, std::ios::out | std::ios::in | std::ios::binary);
+        #else
+        file = std::make_unique<std::fstream>(path); // Don't really know if it causes issues in linux so I've ifdef-ed it
+        #endif
     }
 
     std::unique_ptr<std::fstream> file;
@@ -42,6 +46,9 @@ struct SalsaStream : ISalsaFile, std::iostream {
     SalsaStream(const char* path) : ISalsaFile(path), std::iostream(file->rdbuf()) {}
     SalsaStream(const std::string& path) : ISalsaFile(path.c_str()), std::iostream(file->rdbuf()) {}
     SalsaStream(const SalsaStream&) = delete;
+    #ifdef _WIN32
+    SalsaStream(std::filesystem::path path) : SalsaStream(path.generic_string()) {}; 
+    #endif
 
     template <typename T>
     T read() {
